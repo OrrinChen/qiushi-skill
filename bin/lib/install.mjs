@@ -848,9 +848,10 @@ export async function installTargets(targets, options = {}) {
     adoptLegacy = false,
     cwd = process.cwd(),
     homeDir = os.homedir(),
+    env = process.env,
   } = options;
   const resolved = targets.map((target) => {
-    const platform = getPlatformById(target, { cwd, homeDir });
+    const platform = getPlatformById(target, { cwd, homeDir, env });
     if (!platform) {
       throw new Error(`Unknown platform: ${target}`);
     }
@@ -928,8 +929,13 @@ export async function installTarget(platformId, options = {}) {
 }
 
 export async function uninstallTarget(platformId, options = {}) {
-  const { scope = "user", cwd = process.cwd(), homeDir = os.homedir() } = options;
-  const platform = getPlatformById(platformId, { cwd, homeDir });
+  const {
+    scope = "user",
+    cwd = process.cwd(),
+    homeDir = os.homedir(),
+    env = process.env,
+  } = options;
+  const platform = getPlatformById(platformId, { cwd, homeDir, env });
 
   if (!platform) {
     throw new Error(`Unknown platform: ${platformId}`);

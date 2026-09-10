@@ -65,6 +65,7 @@ test("opencode installs both skills and slash command files", async () => {
       packageRoot: repoRoot,
       homeDir: context.homeDir,
       cwd: context.cwd,
+      env: { ...process.env, XDG_CONFIG_HOME: path.join(context.homeDir, ".config") },
     });
 
     assert.equal(result.kind, "copied");
