@@ -19,10 +19,9 @@
 :; shift
 :; HOOK_PATH="$SCRIPT_DIR/$HOOK_NAME"
 :; if [ ! -e "$HOOK_PATH" ]; then echo "Error: hook not found: $HOOK_PATH" >&2; exit 1; fi
-:; if [ -x "$HOOK_PATH" ]; then exec "$HOOK_PATH" "$@"; fi
 :; if command -v bash >/dev/null 2>&1; then exec bash "$HOOK_PATH" "$@"; fi
-:; exec sh "$HOOK_PATH" "$@"
-:; exit 1
+:; echo "Error: Bash is required to run hook: $HOOK_PATH" >&2
+:; exit 127
 
 @echo off
 setlocal
@@ -53,18 +52,12 @@ if exist "%SCRIPT_DIR%%HOOK_NAME%.ps1" (
     )
 )
 
-:: Fall back to POSIX shell hooks for non-Windows runtimes
+:: Fall back to Bash hooks for non-Windows runtimes
 where bash >nul 2>&1
 if %ERRORLEVEL% equ 0 (
     bash "%SCRIPT_DIR%%HOOK_NAME%" %*
     exit /b %ERRORLEVEL%
 )
 
-where sh >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    sh "%SCRIPT_DIR%%HOOK_NAME%" %*
-    exit /b %ERRORLEVEL%
-)
-
-echo Error: No PowerShell, bash, or sh runtime found for hook "%HOOK_NAME%".
+echo Error: No PowerShell or bash runtime found for hook "%HOOK_NAME%".
 exit /b 1

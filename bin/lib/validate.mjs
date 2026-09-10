@@ -1,5 +1,5 @@
 import path from "node:path";
-import { chmod, readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const REQUIRED_JSON_FILES = [
@@ -21,6 +21,7 @@ const REQUIRED_FILES = [
   "skills/arming-thought/SKILL.md",
   "README.md",
   "README.en.md",
+  "CHANGELOG.md",
 ];
 
 const MARKDOWN_FILES = [
@@ -146,8 +147,6 @@ async function validateHookStructure(repoRoot, hooksJson, errors) {
   }
 
   const shellHookPath = path.join(repoRoot, "hooks", "session-start");
-  await chmod(shellHookPath, 0o755).catch(() => {});
-
   const shellHook = await readFile(shellHookPath, "utf8");
   validateTextIncludes(shellHook, "qiushi:arming-thought", "hooks/session-start", errors);
   validateTextIncludes(shellHook, "hookSpecificOutput", "hooks/session-start", errors);
@@ -169,7 +168,7 @@ async function validateHookStructure(repoRoot, hooksJson, errors) {
   validateTextIncludes(cmdHook, "%HOOK_NAME%.ps1", "hooks/run-hook.cmd", errors);
   validateTextIncludes(cmdHook, "powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File", "hooks/run-hook.cmd", errors);
   validateTextIncludes(cmdHook, "bash \"%SCRIPT_DIR%%HOOK_NAME%\"", "hooks/run-hook.cmd", errors);
-  validateTextIncludes(cmdHook, "sh \"%SCRIPT_DIR%%HOOK_NAME%\"", "hooks/run-hook.cmd", errors);
+  validateTextIncludes(cmdHook, "Bash is required to run hook", "hooks/run-hook.cmd", errors);
 }
 
 export async function runValidation({ repoRoot, stdout = process.stdout, stderr = process.stderr } = {}) {
@@ -242,6 +241,17 @@ export async function runValidation({ repoRoot, stdout = process.stdout, stderr 
     }
   }
 
+  const armingThought = await readFile(path.join(root, "skills", "arming-thought", "SKILL.md"), "utf8");
+  validateTextIncludes(
+    armingThought,
+    "宿主平台的系统、开发者规则与安全约束 > 用户明确指示与项目约束 > 本方法论",
+    "skills/arming-thought/SKILL.md",
+    errors
+  );
+  if (armingThought.includes("用户明确指示 > 宿主平台")) {
+    errors.push("skills/arming-thought/SKILL.md reverses the host and user instruction hierarchy");
+  }
+
   stdout.write("Validating command coverage...\n");
   for (const command of COMMANDS) {
     const filePath = path.join(root, "commands", `${command}.md`);
@@ -251,7 +261,17 @@ export async function runValidation({ repoRoot, stdout = process.stdout, stderr 
   }
 
   stdout.write("Validating markdown links...\n");
-  for (const relativePath of MARKDOWN_FILES) {
+  const markdownFiles = new Set(MARKDOWN_FILES);
+  for (const directory of ["skills", "agents", "commands"]) {
+    const fullDirectory = path.join(root, directory);
+    if (await exists(fullDirectory)) {
+      for (const filePath of await walkFiles(fullDirectory, (candidate) => candidate.endsWith(".md"))) {
+        markdownFiles.add(path.relative(root, filePath));
+      }
+    }
+  }
+
+  for (const relativePath of markdownFiles) {
     if (await exists(path.join(root, relativePath))) {
       await validateMarkdownLinks(root, relativePath, errors);
     }

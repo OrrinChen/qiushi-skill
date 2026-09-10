@@ -24,7 +24,7 @@ function printHelp() {
 
 Usage:
   npx qiushi-skill
-  npx qiushi-skill install [--target <platform>] [--scope user|project] [--no-hooks]
+  npx qiushi-skill install [--target <platform>] [--scope user|project] [--no-hooks] [--adopt-legacy]
   npx qiushi-skill validate
   npx qiushi-skill uninstall --target <platform> [--scope user|project]
   npx qiushi-skill --help
@@ -44,6 +44,7 @@ Examples:
   npx qiushi-skill
   npx qiushi-skill install --target claude-code --scope user
   npx qiushi-skill install --target claude-code,cursor --scope project --no-hooks
+  npx qiushi-skill install --target codex --scope user --adopt-legacy
   npx qiushi-skill validate
   npx qiushi-skill uninstall --target claude-code --scope user
 `);
@@ -55,6 +56,7 @@ function parseArgs(argv) {
     targets: [],
     scope: "user",
     includeHooks: true,
+    adoptLegacy: false,
   };
 
   const args = [...argv];
@@ -83,6 +85,9 @@ function parseArgs(argv) {
       case "--no-hooks":
         parsed.includeHooks = false;
         break;
+      case "--adopt-legacy":
+        parsed.adoptLegacy = true;
+        break;
       case "--help":
       case "-h":
         parsed.command = "help";
@@ -109,6 +114,11 @@ function isInteractive() {
 }
 
 function defaultTargetIndex(platforms) {
+  const detected = platforms.findIndex((platform) => platform.detected);
+  if (detected >= 0) {
+    return detected;
+  }
+
   const preferred = platforms.findIndex((platform) => platform.id === "claude-code");
   return preferred >= 0 ? preferred : 0;
 }
@@ -180,6 +190,9 @@ function printInstallResults(results) {
       if (result.platform.note) {
         console.log(`  Note: ${result.platform.note}`);
       }
+      for (const backupRoot of result.backupRoots ?? []) {
+        console.log(`  Legacy backup: ${backupRoot}`);
+      }
       continue;
     }
 
@@ -198,7 +211,7 @@ function printInstallResults(results) {
 async function runInstall(parsed) {
   const detected = await detectPlatforms();
   const interactiveChoices = !parsed.targets.length && isInteractive()
-    ? await promptInstallChoices(detected)
+    ? { ...parsed, ...await promptInstallChoices(detected) }
     : parsed;
 
   const requestedTargets = normalizeTargets(interactiveChoices.targets, { cwd: process.cwd() });
@@ -210,6 +223,7 @@ async function runInstall(parsed) {
     packageRoot,
     scope: interactiveChoices.scope,
     includeHooks: interactiveChoices.includeHooks,
+    adoptLegacy: interactiveChoices.adoptLegacy,
     cwd: process.cwd(),
   });
   printInstallResults(results);

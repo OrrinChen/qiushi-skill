@@ -113,7 +113,9 @@ $requiredFiles = @(
     "hooks\session-start",
     "hooks\session-start.ps1",
     "skills\arming-thought\SKILL.md",
+    "README.md",
     "README.en.md",
+    "CHANGELOG.md",
     "docs\platforms.md"
 ) | ForEach-Object { Join-Path $repoRoot $_ }
 
@@ -130,6 +132,12 @@ $frontMatterFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "commands")
 foreach ($file in $frontMatterFiles) {
     Get-FrontMatter -Path $file
 }
+
+$armingThought = Get-Content -LiteralPath (Join-Path $repoRoot "skills\arming-thought\SKILL.md") -Raw -Encoding UTF8
+$expectedHierarchy = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("5a6/5Li75bmz5Y+w55qE57O757uf44CB5byA5Y+R6ICF6KeE5YiZ5LiO5a6J5YWo57qm5p2fID4g55So5oi35piO56Gu5oyH56S65LiO6aG555uu57qm5p2fID4g5pys5pa55rOV6K66"))
+$invertedHierarchy = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("55So5oi35piO56Gu5oyH56S6ID4g5a6/5Li75bmz5Y+w"))
+Assert-True ($armingThought.Contains($expectedHierarchy)) "arming-thought must keep host rules above user and methodology instructions"
+Assert-True (-not $armingThought.Contains($invertedHierarchy)) "arming-thought reverses the host and user instruction hierarchy"
 
 Write-Host "Validating command coverage..."
 $expectedCommands = @(
@@ -154,10 +162,15 @@ Write-Host "Validating markdown links..."
 $markdownFiles = @(
     (Join-Path $repoRoot "README.md"),
     (Join-Path $repoRoot "README.en.md"),
+    (Join-Path $repoRoot "CHANGELOG.md"),
     (Join-Path $repoRoot "docs\platforms.md")
 )
 
-foreach ($file in $markdownFiles) {
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "skills") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "agents") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "commands") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+
+foreach ($file in $markdownFiles | Select-Object -Unique) {
     Test-MarkdownLocalTargets -Path $file
 }
 

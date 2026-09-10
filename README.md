@@ -134,6 +134,14 @@ npx qiushi-skill install --target cursor,codex,opencode,openclaw,hermes,nanobot 
 npx qiushi-skill uninstall --target claude-code
 ```
 
+如果 Codex 中已有受支持的旧版手动复制安装（当前包括 1.3.1 官方快照），首次升级用：
+
+```bash
+npx qiushi-skill install --target codex --scope user --adopt-legacy
+```
+
+安装器只会接管与受支持官方快照一致的完整 skill 目录树（Markdown 的 CRLF/LF 换行差异不影响识别）；发现额外文件或内容修改会拒绝覆盖。接管前会把旧目录复制到 `.qiushi-skill-backups/`，然后写入管理清单，后续升级无需再次使用该参数。
+
 各平台的目标目录与原生入口见 [docs/platforms.md](https://github.com/HughYau/qiushi-skill/blob/main/docs/platforms.md)。没有 Node.js 的话，把 `skills/` 下的目录复制到宿主的 skills 目录即可。
 
 ### 方式二：Claude Code 官方 Marketplace
@@ -193,6 +201,8 @@ npx qiushi-skill validate
 - `investigator.md` — 只读调查研究员，产出「事实 / 推断 / 未知」三栏调查报告，主线可并行派遣多个分头调查
 - `self-critic.md` — 新鲜上下文审查员，只看制品不看作者叙述，每条批评附证据与改进建议
 
+仅安装 `skills/*` 的宿主（包括 Codex）不依赖这些命名模板：对应 skill 会回退为向通用子 agent 明确传入同样的只读或审查边界。
+
 **🗺️ Reference Guides**  
 按需查阅的参考工具，由对应 SKILL.md 在需要时引用：
 - `contradiction-types-reference.md` — 矛盾类型速查表
@@ -213,7 +223,7 @@ qiushi-skill/
 ├── commands/                         # 手动 slash commands 入口
 ├── hooks/                            # Session 注入系统
 │   ├── hooks.json
-│   ├── session-start                 # POSIX shell 注入脚本
+│   ├── session-start                 # Bash 注入脚本（macOS / Linux）
 │   ├── session-start.ps1             # Windows PowerShell 注入脚本
 │   └── run-hook.cmd                  # Windows 适配
 ├── agents/
