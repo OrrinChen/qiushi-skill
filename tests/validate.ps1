@@ -134,8 +134,10 @@ foreach ($file in $frontMatterFiles) {
 }
 
 $armingThought = Get-Content -LiteralPath (Join-Path $repoRoot "skills\arming-thought\SKILL.md") -Raw -Encoding UTF8
-Assert-True ($armingThought.Contains("宿主平台的系统、开发者规则与安全约束 > 用户明确指示与项目约束 > 本方法论")) "arming-thought must keep host rules above user and methodology instructions"
-Assert-True (-not $armingThought.Contains("用户明确指示 > 宿主平台")) "arming-thought reverses the host and user instruction hierarchy"
+$expectedHierarchy = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("5a6/5Li75bmz5Y+w55qE57O757uf44CB5byA5Y+R6ICF6KeE5YiZ5LiO5a6J5YWo57qm5p2fID4g55So5oi35piO56Gu5oyH56S65LiO6aG555uu57qm5p2fID4g5pys5pa55rOV6K66"))
+$invertedHierarchy = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("55So5oi35piO56Gu5oyH56S6ID4g5a6/5Li75bmz5Y+w"))
+Assert-True ($armingThought.Contains($expectedHierarchy)) "arming-thought must keep host rules above user and methodology instructions"
+Assert-True (-not $armingThought.Contains($invertedHierarchy)) "arming-thought reverses the host and user instruction hierarchy"
 
 Write-Host "Validating command coverage..."
 $expectedCommands = @(
