@@ -67,6 +67,6 @@ description: |
 
 - 调查揭示多头矛盾、抓不住重点 → `contradiction-analysis`
 - 结论已形成、需要验证 → `practice-cognition`
-- 范围大、可分头查 → 派遣 `investigator` 子 agent 并行调查，主线只汇总三栏
+- 范围大、可分头查且宿主支持子 agent → 派遣通用子 agent，明确只读边界并要求返回三栏调查结果；宿主能发现 `investigator` 模板时可直接使用
 
 > 原著依据：[original-texts.md](original-texts.md)

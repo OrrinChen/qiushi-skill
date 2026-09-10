@@ -55,7 +55,15 @@ npx qiushi-skill install --target all --scope user
 npx qiushi-skill uninstall --target claude-code
 ```
 
-The CLI is zero-dependency, writes a `.qiushi-skill-install.json` manifest per target so uninstall only removes what it installed, and ships `validate` for self-checks.
+The CLI is zero-dependency and ships `validate` for self-checks. Skills-only targets use a `.qiushi-skill-install.json` manifest so uninstall removes only managed entries. Dedicated Claude Code and Cursor bundle roots are installed transactionally and must not be symlinks.
+
+For the first upgrade from a supported manually copied Codex install (currently including the official 1.3.1 snapshot), run:
+
+```bash
+npx qiushi-skill install --target codex --scope user --adopt-legacy
+```
+
+The installer adopts only a complete skill directory tree matching a supported official snapshot (CRLF/LF differences in Markdown are normalized). It refuses extra or modified content, backs up the old directories under `.qiushi-skill-backups/`, and then writes the managed-install manifest. Later upgrades do not need this flag.
 
 ### Claude Code Official Marketplace
 
@@ -114,6 +122,8 @@ Every method skill keeps only five sections: **use / don't use** (trigger bounda
 
 Two host-discoverable sub-agents live in `agents/`: `investigator` (read-only, returns a fact / inference / unknown ledger) and `self-critic` (fresh-context reviewer that reads artifacts, not narratives).
 
+Hosts that install only `skills/*`, including Codex, do not depend on those named templates. The relevant skills instead pass the same read-only or review contract to a generic sub-agent.
+
 Manual command entrypoints live in `commands/*.md` for hosts that support Markdown slash commands.
 
 ## Project Layout
@@ -127,7 +137,7 @@ qiushi-skill/
 ├── bin/                 # npx qiushi-skill CLI
 ├── skills/              # entry kernel + nine method skills + workflows
 ├── commands/            # manual slash-command entrypoints
-├── hooks/               # SessionStart injection (POSIX + PowerShell)
+├── hooks/               # SessionStart injection (Bash + PowerShell)
 ├── agents/              # investigator, self-critic
 ├── docs/                # site page + platforms.md
 ├── CHANGELOG.md

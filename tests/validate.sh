@@ -99,7 +99,9 @@ for f in \
   hooks/session-start.ps1 \
   hooks/run-hook.cmd \
   skills/arming-thought/SKILL.md \
+  README.md \
   README.en.md \
+  CHANGELOG.md \
   docs/platforms.md
 do
   [ -f "$REPO_ROOT/$f" ] || fail "Missing required file: $f"
@@ -121,8 +123,8 @@ check_frontmatter() {
   fi
   local fm
   fm=$(sed -n "2,$((terminator))p" "$file")
-  echo "$fm" | grep -qE '^name:\s*.+' || fail "Missing 'name' in frontmatter: $file"
-  echo "$fm" | grep -qE '^description:\s*\|$' || fail "Missing block 'description' in frontmatter: $file"
+  echo "$fm" | grep -qE '^name:[[:space:]]*.+' || fail "Missing 'name' in frontmatter: $file"
+  echo "$fm" | grep -qE '^description:[[:space:]]*\|$' || fail "Missing block 'description' in frontmatter: $file"
 }
 
 while IFS= read -r -d '' f; do
@@ -136,6 +138,13 @@ done < <(find "$REPO_ROOT/agents" -name "*.md" -print0 2>/dev/null || true)
 while IFS= read -r -d '' f; do
   check_frontmatter "$f"
 done < <(find "$REPO_ROOT/commands" -name "*.md" -print0 2>/dev/null || true)
+
+ARMING_THOUGHT="$REPO_ROOT/skills/arming-thought/SKILL.md"
+grep -qF "宿主平台的系统、开发者规则与安全约束 > 用户明确指示与项目约束 > 本方法论" "$ARMING_THOUGHT" \
+  || fail "arming-thought must keep host rules above user and methodology instructions"
+if grep -qF "用户明确指示 > 宿主平台" "$ARMING_THOUGHT"; then
+  fail "arming-thought reverses the host and user instruction hierarchy"
+fi
 
 # --- Command 覆盖校验 ---
 echo "Validating command coverage..."
@@ -174,25 +183,28 @@ check_md_links() {
 for f in \
   README.md \
   README.en.md \
+  CHANGELOG.md \
   docs/platforms.md
 do
   [ -f "$REPO_ROOT/$f" ] && check_md_links "$REPO_ROOT/$f"
 done
 
+while IFS= read -r -d '' f; do
+  check_md_links "$f"
+done < <(find "$REPO_ROOT/skills" "$REPO_ROOT/agents" "$REPO_ROOT/commands" -name "*.md" -print0)
+
 # --- Bash hook 冒烟测试 ---
 echo "Running bash hook smoke test..."
 HOOK="$REPO_ROOT/hooks/session-start"
-if [ -x "$HOOK" ] || chmod +x "$HOOK"; then
-  hook_output=$(CLAUDE_PLUGIN_ROOT="$REPO_ROOT" "$HOOK" 2>/dev/null) || fail "Bash hook exited with error"
-  if [ -n "$hook_output" ]; then
-    if ! printf '%s' "$hook_output" | json_validate_stdin; then
-      fail "Bash hook output is not valid JSON"
-    elif ! printf '%s' "$hook_output" | grep -q "qiushi:arming-thought"; then
-      fail "Bash hook payload missing skill context"
-    fi
-  else
-    fail "Bash hook produced no output"
+hook_output=$(CLAUDE_PLUGIN_ROOT="$REPO_ROOT" bash "$HOOK" 2>/dev/null) || fail "Bash hook exited with error"
+if [ -n "$hook_output" ]; then
+  if ! printf '%s' "$hook_output" | json_validate_stdin; then
+    fail "Bash hook output is not valid JSON"
+  elif ! printf '%s' "$hook_output" | grep -q "qiushi:arming-thought"; then
+    fail "Bash hook payload missing skill context"
   fi
+else
+  fail "Bash hook produced no output"
 fi
 
 # --- 结果 ---

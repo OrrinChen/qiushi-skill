@@ -113,7 +113,9 @@ $requiredFiles = @(
     "hooks\session-start",
     "hooks\session-start.ps1",
     "skills\arming-thought\SKILL.md",
+    "README.md",
     "README.en.md",
+    "CHANGELOG.md",
     "docs\platforms.md"
 ) | ForEach-Object { Join-Path $repoRoot $_ }
 
@@ -130,6 +132,10 @@ $frontMatterFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "commands")
 foreach ($file in $frontMatterFiles) {
     Get-FrontMatter -Path $file
 }
+
+$armingThought = Get-Content -LiteralPath (Join-Path $repoRoot "skills\arming-thought\SKILL.md") -Raw -Encoding UTF8
+Assert-True ($armingThought.Contains("宿主平台的系统、开发者规则与安全约束 > 用户明确指示与项目约束 > 本方法论")) "arming-thought must keep host rules above user and methodology instructions"
+Assert-True (-not $armingThought.Contains("用户明确指示 > 宿主平台")) "arming-thought reverses the host and user instruction hierarchy"
 
 Write-Host "Validating command coverage..."
 $expectedCommands = @(
@@ -154,10 +160,15 @@ Write-Host "Validating markdown links..."
 $markdownFiles = @(
     (Join-Path $repoRoot "README.md"),
     (Join-Path $repoRoot "README.en.md"),
+    (Join-Path $repoRoot "CHANGELOG.md"),
     (Join-Path $repoRoot "docs\platforms.md")
 )
 
-foreach ($file in $markdownFiles) {
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "skills") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "agents") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+$markdownFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot "commands") -Recurse -File -Filter "*.md" | Select-Object -ExpandProperty FullName
+
+foreach ($file in $markdownFiles | Select-Object -Unique) {
     Test-MarkdownLocalTargets -Path $file
 }
 
